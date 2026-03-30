@@ -1,5 +1,5 @@
 def menu_principal():
-    gestion = DoctorServicios()
+gestion = GestionMedica()
     
     while True:
         print("\n=== SISTEMA MÉDICO - MÓDULO GEORDANY ===")
