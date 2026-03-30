@@ -1,5 +1,9 @@
+from services.doctor_service import DoctorServicios
+class GestionMedica(DoctorServicios):
+    def __init__(self):
+        super().__init__()  # Llama al constructor de DoctorServicios para inicializar las listas
 def menu_principal():
-gestion = GestionMedica()
+    gestion = GestionMedica()
     
     while True:
         print("\n=== SISTEMA MÉDICO - MÓDULO GEORDANY ===")
