@@ -23,10 +23,13 @@ def actualizar_paciente():
     id_buscar = input("Introduce el ID del paciente a editar: ")
     for p in lista_pacientes:
         if p.id_p == id_buscar:
-            p.nombre = input("Nuevo nombre: ")
-            print("🔄 Datos actualizados.")
-            return
-    print("❌ Paciente no encontrado.")
+            # Pedimos el nuevo dato
+            nuevo_nombre = input("Introduce el nuevo nombre: ")
+            p.nombre = nuevo_nombre
+            print("✅ Paciente actualizado con éxito.")
+            return # Salimos de la función al terminar
+    
+    print("⚠️ No se encontró ningún paciente con ese ID.")
 
 def eliminar_paciente():
     id_buscar = input("ID del paciente a eliminar: ")
