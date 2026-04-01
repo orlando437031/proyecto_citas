@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import uuid
 
-# 🎨 Colores
+#  Colores
 COLOR_FONDO = "#f2e9ff"
 COLOR_TITULO = "#8b5cf6"
 COLOR_BOTON = "#3b82f6"
