@@ -155,7 +155,7 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = MediControlPro(root)
     root.mainloop()
-=======
+
 from tkinter import ttk
 from PIL import Image, ImageTk, ImageSequence
 
@@ -231,4 +231,3 @@ if __name__ == "__main__":
     app = PortadaSoftware(root) # <--- Aquí ya no te dará error
     root.mainloop()
     
->>>>>>> 6bf16b44afb971ea09dae3bf53d9c435059fc4c6
