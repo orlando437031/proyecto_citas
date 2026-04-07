@@ -2,6 +2,15 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import sqlite3
 
+# --- 1. IMPORTACIONES DE TUS OTROS MÓDULOS (AL PRINCIPIO) ---
+try:
+    from views.citas_ui import registrar_cita_ui
+    from views.pacientes_ui import abrir_pacientes_ui  # Ajusta el nombre si es diferente
+    # Si quieres llamar al mismo archivo de doctores desde otro, se importa así:
+    # from views.doctores_ui import ModuloDoctores 
+except ImportError as e:
+    print(f"Nota: Algunos módulos no se encontraron: {e}")
+
 class ModuloDoctores:
     def __init__(self, ventana_principal):
         self.ventana_principal = ventana_principal
@@ -32,26 +41,22 @@ class ModuloDoctores:
 
     def crear_estilos(self):
         style = ttk.Style()
-        style.theme_use("clam") # Cambiado a 'clam' para mejor control
+        style.theme_use("clam")
         
-        # Estilo de la Tabla (Treeview)
         style.configure("Treeview",
                         background="#161b22",
                         foreground="#e6edf3",
                         fieldbackground="#161b22",
-                        bordercolor="#30363d",
                         rowheight=35,
                         font=("Segoe UI", 10))
         
         style.configure("Treeview.Heading",
                         background="#21262d",
-                        foreground="#ffb703", # Dorado para encabezados
+                        foreground="#ffb703", 
                         font=("Segoe UI", 11, "bold"))
 
-        style.map("Treeview", background=[("selected", "#d4a017")], foreground=[("selected", "black")])
-
     def crear_widgets(self):
-        # 🟡 SIDEBAR IZQUIERDO (Navegación Vertical)
+        # 🟡 SIDEBAR IZQUIERDO
         self.sidebar = tk.Frame(self.ventana, bg="#161b22", width=200)
         self.sidebar.pack(side="left", fill="y")
 
@@ -63,7 +68,10 @@ class ModuloDoctores:
                              bg="#161b22", fg=color, activebackground="#30363d",
                              activeforeground="white", bd=0, pady=15, cursor="hand2", command=cmd)
 
+        # Botones de navegación vinculados
         btn_nav("🏠 INICIO", self.ir_inicio).pack(fill="x")
+        btn_nav("👥 PACIENTES", self.abrir_pacientes).pack(fill="x") # Nuevo botón
+        btn_nav("📅 CITAS", self.abrir_citas).pack(fill="x")         # Nuevo botón
         btn_nav("🔄 RECARGAR", self.cargar_doctores).pack(fill="x")
         btn_nav("❌ SALIR", self.cerrar, "#ff4d4d").pack(side="bottom", fill="x")
 
@@ -71,104 +79,60 @@ class ModuloDoctores:
         main_container = tk.Frame(self.ventana, bg="#0b0f19", padx=30, pady=20)
         main_container.pack(side="right", fill="both", expand=True)
 
-        # --- SECCIÓN FORMULARIO (Diseño en Tarjeta) ---
-        card_form = tk.Frame(main_container, bg="#161b22", padx=20, pady=20, 
-                             highlightthickness=1, highlightbackground="#30363d")
+        # --- SECCIÓN FORMULARIO ---
+        card_form = tk.Frame(main_container, bg="#161b22", padx=20, pady=20, highlightthickness=1, highlightbackground="#30363d")
         card_form.pack(fill="x", pady=(0, 20))
-
-        tk.Label(card_form, text="REGISTRO DE PERSONAL MÉDICO", font=("Segoe UI", 14, "bold"), 
-                 bg="#161b22", fg="white").grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 20))
 
         def input_field(txt, r, c):
             tk.Label(card_form, text=txt, bg="#161b22", fg="#8b949e", font=("Segoe UI", 9)).grid(row=r, column=c, sticky="w", padx=10)
-            entry = tk.Entry(card_form, bg="#0d1117", fg="white", insertbackground="white", 
-                             relief="flat", font=("Segoe UI", 11))
+            entry = tk.Entry(card_form, bg="#0d1117", fg="white", insertbackground="white", relief="flat", font=("Segoe UI", 11))
             entry.grid(row=r+1, column=c, padx=10, pady=(5, 15), sticky="ew")
             return entry
 
         card_form.columnconfigure((0,1,2,3), weight=1)
-        
         self.entry_nombre = input_field("NOMBRE", 1, 0)
         self.entry_apellido = input_field("APELLIDO", 1, 1)
         self.entry_telefono = input_field("TELÉFONO", 1, 2)
         
-        # Combos con estilo
-        tk.Label(card_form, text="ESPECIALIDAD", bg="#161b22", fg="#8b949e").grid(row=3, column=0, sticky="w", padx=10)
         self.combo_esp = ttk.Combobox(card_form, values=self.especialidades, state="readonly")
         self.combo_esp.grid(row=4, column=0, padx=10, pady=5, sticky="ew")
 
-        tk.Label(card_form, text="TURNO", bg="#161b22", fg="#8b949e").grid(row=3, column=1, sticky="w", padx=10)
         self.combo_hor = ttk.Combobox(card_form, values=self.horarios, state="readonly")
         self.combo_hor.grid(row=4, column=1, padx=10, pady=5, sticky="ew")
 
-        # --- BOTONERA DE ACCIÓN ---
+        # --- BOTONERA ---
         action_frame = tk.Frame(card_form, bg="#161b22")
         action_frame.grid(row=4, column=2, columnspan=2, sticky="e", padx=10)
 
-        def btn_act(txt, bg, cmd):
-            return tk.Button(action_frame, text=txt, bg=bg, fg="white", font=("Segoe UI", 9, "bold"),
-                             relief="flat", padx=20, pady=8, cursor="hand2", command=cmd)
+        tk.Button(action_frame, text="＋ AGREGAR", bg="#238636", fg="white", command=self.agregar_doctor, padx=20).pack(side="left", padx=5)
+        tk.Button(action_frame, text="🧹 LIMPIAR", bg="#484f58", fg="white", command=self.limpiar_formulario, padx=20).pack(side="left", padx=5)
 
-        btn_act("＋ AGREGAR", "#238636", self.agregar_doctor).pack(side="left", padx=5)
-        btn_act("🗑 ELIMINAR", "#da3633", self.eliminar_doctor).pack(side="left", padx=5)
-        btn_act("🧹 LIMPIAR", "#484f58", self.limpiar_formulario).pack(side="left", padx=5)
-
-        # --- TABLA DE RESULTADOS ---
+        # --- TABLA ---
         self.tabla = ttk.Treeview(main_container, columns=("ID", "NOMBRE", "APELLIDO", "ESPECIALIDAD", "TEL", "TURNO"), show="headings")
-        
-        columnas = [("ID", 50), ("NOMBRE", 150), ("APELLIDO", 150), ("ESPECIALIDAD", 150), ("TEL", 120), ("TURNO", 180)]
-        for col, ancho in columnas:
+        for col in ("ID", "NOMBRE", "APELLIDO", "ESPECIALIDAD", "TEL", "TURNO"):
             self.tabla.heading(col, text=col)
-            self.tabla.column(col, width=ancho, anchor="center")
-
+            self.tabla.column(col, width=100, anchor="center")
         self.tabla.pack(fill="both", expand=True)
-        self.tabla.bind("<<TreeviewSelect>>", self.seleccionar)
 
-    # Lógica mejorada
+    # --- LÓGICA DE FUNCIONES ---
     def agregar_doctor(self):
         datos = (self.entry_nombre.get(), self.entry_apellido.get(), self.combo_esp.get(), 
                  self.entry_telefono.get(), self.combo_hor.get())
-        
         if all(datos):
             cursor = self.conexion.cursor()
             cursor.execute("INSERT INTO doctores VALUES (NULL, ?, ?, ?, ?, ?)", datos)
             self.conexion.commit()
-            messagebox.showinfo("Éxito", "Doctor registrado en el sistema elite.")
+            messagebox.showinfo("Éxito", "Doctor registrado correctamente.")
             self.cargar_doctores()
             self.limpiar_formulario()
         else:
-            messagebox.showwarning("Incompleto", "Por favor llene todos los campos de registro.")
-
-    def eliminar_doctor(self):
-        seleccion = self.tabla.selection()
-        if not seleccion:
-            messagebox.showwarning("Atención", "Seleccione un doctor de la lista.")
-            return
-        
-        if messagebox.askyesno("Confirmar", "¿Desea eliminar permanentemente este registro?"):
-            item = self.tabla.item(seleccion)
-            id_doc = item['values'][0]
-            cursor = self.conexion.cursor()
-            cursor.execute("DELETE FROM doctores WHERE id=?", (id_doc,))
-            self.conexion.commit()
-            self.cargar_doctores()
+            messagebox.showwarning("Atención", "Llene todos los campos.")
 
     def cargar_doctores(self):
         for i in self.tabla.get_children(): self.tabla.delete(i)
         cursor = self.conexion.cursor()
         cursor.execute("SELECT * FROM doctores")
         for row in cursor.fetchall(): self.tabla.insert("", "end", values=row)
-
-    def seleccionar(self, event):
-        item = self.tabla.item(self.tabla.selection())
-        v = item["values"]
-        if v:
-            self.limpiar_formulario()
-            self.entry_nombre.insert(0, v[1])
-            self.entry_apellido.insert(0, v[2])
-            self.entry_telefono.insert(0, v[4])
-            self.combo_esp.set(v[3])
-            self.combo_hor.set(v[5])
 
     def limpiar_formulario(self):
         self.entry_nombre.delete(0, tk.END)
@@ -177,9 +141,28 @@ class ModuloDoctores:
         self.combo_esp.set('')
         self.combo_hor.set('')
 
-    def cerrar(self): self.ventana.destroy()
-    def ir_inicio(self): self.ventana.destroy()
+    def ir_inicio(self):
+        self.ventana.destroy()
 
+    def cerrar(self):
+        self.ventana.destroy()
+
+    # --- NUEVAS FUNCIONES DE VINCULACIÓN ---
+    def abrir_citas(self):
+        """Abre la ventana de registro de citas"""
+        try:
+            registrar_cita_ui()
+        except NameError:
+            messagebox.showerror("Error", "La función registrar_cita_ui no está definida.")
+
+    def abrir_pacientes(self):
+        """Abre el módulo de pacientes"""
+        try:
+            abrir_pacientes_ui()
+        except NameError:
+            messagebox.showerror("Error", "La función abrir_pacientes_ui no está definida.")
+
+# --- INICIO DE LA APP ---
 if __name__ == "__main__":
     root = tk.Tk()
     root.withdraw()
