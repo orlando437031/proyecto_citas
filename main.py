@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-<<<<<<< HEAD
-=======
+
 from PIL import Image, ImageTk, ImageSequence
 import sqlite3
 
@@ -159,7 +158,7 @@ if __name__ == "__main__":
     root.mainloop()
 
 from tkinter import ttk
->>>>>>> c4166164d4fd6bed1f274f4902aac2f52c0cbe4a
+
 from PIL import Image, ImageTk, ImageSequence
 from datetime import datetime
 
