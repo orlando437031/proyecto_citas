@@ -1,484 +1,375 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-
-from PIL import Image, ImageTk, ImageSequence
+from PIL import Image, ImageTk
 import sqlite3
+from datetime import datetime
 
 class MediControlPro:
+
     def __init__(self, root):
+
         self.root = root
         self.root.title("MediControl Pro v3.0 - Sistema Médico Integral")
         self.root.geometry("1100x700")
-        self.root.configure(bg="#0a192f") # Fondo Azul Oscuro Navy
-        
-        # Base de Datos (Conexión inicial)
+        self.root.configure(bg="#0a192f")
+
         self.conn = sqlite3.connect("clinica.db")
-        self.crear_tablas_iniciales()
+        self.crear_tablas()
 
-        # --- 1. PANTALLA DE CARGA (SPLASH) ---
-        self.mostrar_pantalla_carga()
+        self.mostrar_splash()
 
-    def crear_tablas_iniciales(self):
+# ---------------- BASE DE DATOS ----------------
+
+    def crear_tablas(self):
+
         cursor = self.conn.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS doctores 
-                       (id INTEGER PRIMARY KEY, nombre TEXT, especialidad TEXT, tel TEXT)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS pacientes 
-                       (id INTEGER PRIMARY KEY, nombre TEXT, edad TEXT, tel TEXT)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS citas 
-                       (id INTEGER PRIMARY KEY, fecha TEXT, doctor TEXT, paciente TEXT)''')
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pacientes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT,
+        identidad TEXT,
+        edad TEXT,
+        telefono TEXT)
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS doctores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT,
+        especialidad TEXT,
+        telefono TEXT)
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS citas(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fecha TEXT,
+        paciente TEXT,
+        doctor TEXT)
+        """)
+
         self.conn.commit()
 
-    def mostrar_pantalla_carga(self):
-        # Fondo
+# ---------------- SPLASH ----------------
+
+    def mostrar_splash(self):
+
         try:
-            self.img_fondo = Image.open("imagen 2.webp").resize((1100, 700))
-            self.bg_render = ImageTk.PhotoImage(self.img_fondo)
-            self.lbl_bg = tk.Label(self.root, image=self.bg_render)
-            self.lbl_bg.place(x=0, y=0, relwidth=1, relheight=1)
+            img = Image.open("imagen 2.webp").resize((1100,700))
+            self.bg = ImageTk.PhotoImage(img)
+
+            lbl = tk.Label(self.root,image=self.bg)
+            lbl.place(x=0,y=0,relwidth=1,relheight=1)
+
         except:
-            tk.Label(self.root, bg="#0a192f").place(x=0, y=0, relwidth=1, relheight=1)
+            self.root.configure(bg="#0a192f")
 
-        # Capa de texto
-        self.txt_splash = tk.Label(self.root, text="MEDICONTROL PRO", font=("Century Gothic", 40, "bold"), 
-                                   fg="#00e5ff", bg="#0a192f")
-        self.txt_splash.place(relx=0.5, rely=0.4, anchor="center")
+        titulo = tk.Label(
+            self.root,
+            text="MEDICONTROL PRO",
+            font=("Century Gothic",40,"bold"),
+            fg="#00e5ff",
+            bg="#0a192f"
+        )
 
-        # Barra de progreso
-        self.style = ttk.Style()
-        self.style.theme_use('default')
-        self.style.configure("Cyan.Horizontal.TProgressbar", thickness=15, troughcolor='#0a192f', background='#00e5ff')
-        
-        self.bar = ttk.Progressbar(self.root, length=500, mode="determinate", style="Cyan.Horizontal.TProgressbar")
-        self.bar.place(relx=0.5, rely=0.6, anchor="center")
-        
-        self.lbl_status = tk.Label(self.root, text="Cargando base de datos...", font=("Arial", 10), fg="white", bg="#0a192f")
-        self.lbl_status.place(relx=0.5, rely=0.65, anchor="center")
+        titulo.place(relx=0.5,rely=0.4,anchor="center")
 
-        self.animar_carga(0)
+        self.barra = ttk.Progressbar(self.root,length=500,mode="determinate")
+        self.barra.place(relx=0.5,rely=0.6,anchor="center")
 
-    def animar_carga(self, n):
-        if n <= 100:
-            self.bar['value'] = n
-            # Mensajes dinámicos de carga
-            if n == 30: self.lbl_status.config(text="Cargando módulos de interfaz...")
-            if n == 60: self.lbl_status.config(text="Sincronizando expedientes...")
-            if n == 90: self.lbl_status.config(text="Sistema Listo.")
-            self.root.after(30, self.animar_carga, n + 1)
+        self.cargar(0)
+
+    def cargar(self,n):
+
+        if n<=100:
+            self.barra["value"]=n
+            self.root.after(20,self.cargar,n+1)
+
         else:
-            self.mostrar_login_final()
 
-    def mostrar_login_final(self):
-        # Botón para entrar al Dashboard
-        self.btn_entrar = tk.Button(self.root, text="INGRESAR AL PANEL", font=("Helvetica", 14, "bold"), 
-                                    bg="#00e5ff", fg="#0a192f", bd=0, padx=40, pady=15, 
-                                    cursor="hand2", command=self.cargar_dashboard)
-        self.btn_entrar.place(relx=0.5, rely=0.75, anchor="center")
+            btn=tk.Button(
+                self.root,
+                text="INGRESAR AL PANEL",
+                font=("Arial",14,"bold"),
+                bg="#00e5ff",
+                fg="#0a192f",
+                command=self.dashboard
+            )
 
-    # --- 2. DASHBOARD PRINCIPAL ---
-    def cargar_dashboard(self):
-        # Limpiar pantalla de carga
-        for widget in self.root.winfo_children():
-            widget.destroy()
+            btn.place(relx=0.5,rely=0.75,anchor="center")
 
-        # BARRA LATERAL
-        self.sidebar = tk.Frame(self.root, bg="#112240", width=250)
-        self.sidebar.pack(side="left", fill="y")
-        self.sidebar.pack_propagate(False)
+# ---------------- DASHBOARD ----------------
 
-        tk.Label(self.sidebar, text="🏥 MENU", font=("Arial", 20, "bold"), bg="#112240", fg="#00e5ff", pady=30).pack()
+    def dashboard(self):
 
-        def crear_btn_nav(texto, emoji, cmd):
-            return tk.Button(self.sidebar, text=f"{emoji} {texto}", font=("Segoe UI", 12),
-                             bg="#112240", fg="white", relief="flat", anchor="w", padx=25,
-                             activebackground="#1d2d50", activeforeground="#00e5ff",
-                             cursor="hand2", command=cmd).pack(fill="x", pady=5)
+        for w in self.root.winfo_children():
+            w.destroy()
 
-        crear_btn_nav("DOCTORES", "👨‍⚕️", self.ventana_doctores)
-        crear_btn_nav("PACIENTES", "👥", self.ventana_pacientes)
-        crear_btn_nav("CITAS", "📅", self.ventana_citas)
-        
-        tk.Button(self.sidebar, text="🚪 CERRAR SESIÓN", bg="#112240", fg="#ff5555", relief="flat", 
-                  command=self.root.quit).pack(side="bottom", fill="x", pady=20)
+        sidebar = tk.Frame(self.root,bg="#112240",width=250)
+        sidebar.pack(side="left",fill="y")
 
-        # ÁREA CENTRAL
-        self.main_frame = tk.Frame(self.root, bg="#0a192f")
-        self.main_area_init()
+        tk.Label(
+            sidebar,
+            text="🏥 MENU",
+            font=("Arial",20,"bold"),
+            bg="#112240",
+            fg="#00e5ff"
+        ).pack(pady=30)
 
-    def main_area_init(self):
-        self.main_frame.pack(side="right", expand=True, fill="both")
-        tk.Label(self.main_frame, text="BIENVENIDO A MEDICONTROL PRO", font=("Century Gothic", 25, "bold"), 
-                 bg="#0a192f", fg="white").pack(pady=50)
-        
-        # Tarjetas de estado rápidas
-        card_frame = tk.Frame(self.main_frame, bg="#0a192f")
-        card_frame.pack(pady=20)
+        tk.Button(sidebar,text="👥 PACIENTES",bg="#112240",fg="white",relief="flat",
+                  command=self.modulo_pacientes).pack(fill="x",pady=5)
 
-        self.crear_card(card_frame, "CITAS HOY", "12", "#00e5ff")
-        self.crear_card(card_frame, "URGENCIAS", "3", "#ff5555")
+        tk.Button(sidebar,text="👨‍⚕️ DOCTORES",bg="#112240",fg="white",relief="flat",
+                  command=self.modulo_doctores).pack(fill="x",pady=5)
 
-    def crear_card(self, parent, titulo, valor, color):
-        f = tk.Frame(parent, bg="#112240", padx=30, pady=20, highlightthickness=1, highlightbackground=color)
-        f.pack(side="left", padx=20)
-        tk.Label(f, text=titulo, bg="#112240", fg="#8892b0").pack()
-        tk.Label(f, text=valor, font=("Arial", 24, "bold"), bg="#112240", fg="white").pack()
+        tk.Button(sidebar,text="📅 CITAS",bg="#112240",fg="white",relief="flat",
+                  command=self.modulo_citas).pack(fill="x",pady=5)
 
-    # --- 3. MÓDULOS (VENTANAS) ---
-    def ventana_doctores(self):
-        top = tk.Toplevel(self.root)
-        top.title("Gestión de Doctores")
-        top.geometry("600x400")
-        top.configure(bg="#112240")
-        tk.Label(top, text="REGISTRO DE DOCTORES", font=("Arial", 18, "bold"), bg="#112240", fg="#00e5ff").pack(pady=20)
-        # Aquí va tu código de ModuloDoctores anterior...
-        tk.Label(top, text="Módulo en funcionamiento...", bg="#112240", fg="white").pack()
+        main=tk.Frame(self.root,bg="#0a192f")
+        main.pack(expand=True,fill="both")
 
-    def ventana_pacientes(self):
-        top = tk.Toplevel(self.root)
-        top.title("Gestión de Pacientes")
-        top.geometry("600x400")
-        top.configure(bg="#112240")
-        tk.Label(top, text="GESTIÓN DE PACIENTES", font=("Arial", 18, "bold"), bg="#112240", fg="#00e5ff").pack(pady=20)
-        tk.Button(top, text="Registrar Nuevo", bg="#00e5ff", fg="#0a192f").pack(pady=10)
-
-    def ventana_citas(self):
-        top = tk.Toplevel(self.root)
-        top.title("Calendario de Citas")
-        top.geometry("700x500")
-        top.configure(bg="#0a192f")
-        tk.Label(top, text="AGENDA MÉDICA", font=("Arial", 18, "bold"), bg="#0a192f", fg="#00e5ff").pack(pady=20)
-        # Ejemplo de tabla rápida
-        tabla = ttk.Treeview(top, columns=("Hora", "Paciente"), show="headings")
-        tabla.heading("Hora", text="HORA")
-        tabla.heading("Paciente", text="PACIENTE")
-        tabla.pack(fill="both", expand=True, padx=20, pady=20)
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = MediControlPro(root)
-    root.mainloop()
-
-from tkinter import ttk
-
-from PIL import Image, ImageTk, ImageSequence
-from datetime import datetime
-
-# ===============================
-# BASE DE DATOS TEMPORAL
-# ===============================
-
-pacientes = []
-doctores = []
-citas = []
-
-# ===============================
-# PORTADA
-# ===============================
-
-class PortadaSoftware:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("MediControl Pro - Innovación Médica")
-        self.root.geometry("900x600")
-        self.root.resizable(False, False)
-
-        try:
-            self.gif = Image.open("imagen 2.webp")
-            self.frames = [
-                ImageTk.PhotoImage(img.resize((900, 600)))
-                for img in ImageSequence.Iterator(self.gif)
-            ]
-        except:
-            self.frames = None
-            self.root.configure(bg="#001F3F")
-
-        self.label_fondo = tk.Label(self.root)
-        self.label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
-
-        self.titulo = tk.Label(
-            self.root,
-            text="SISTEMA MÉDICO INTEGRAL",
-            font=("Century Gothic", 32, "bold"),
-            fg="#00E5FF",
-            bg="#001F3F",
-            pady=10,
-        )
-        self.titulo.place(relx=0.5, rely=0.2, anchor="center")
-
-        self.style = ttk.Style()
-        self.style.theme_use("default")
-
-        self.progreso = ttk.Progressbar(
-            self.root,
-            orient="horizontal",
-            length=400,
-            mode="determinate",
-        )
-        self.progreso.place(relx=0.5, rely=0.7, anchor="center")
-
-        self.lbl_carga = tk.Label(
-            self.root,
-            text="Iniciando módulos...",
-            font=("Arial", 10),
+        tk.Label(
+            main,
+            text="BIENVENIDO A MEDICONTROL PRO",
+            font=("Century Gothic",25,"bold"),
             fg="white",
-            bg="#001F3F",
-        )
-        self.lbl_carga.place(relx=0.5, rely=0.75, anchor="center")
+            bg="#0a192f"
+        ).pack(pady=50)
 
-        self.btn_entrar = tk.Button(
-            self.root,
-            text="INGRESAR AHORA",
-            command=self.acceder,
-            font=("Helvetica", 14, "bold"),
-            bg="#00E5FF",
-            fg="#001F3F",
-            padx=30,
-            pady=10,
-            cursor="hand2",
-            bd=0,
-        )
+# ---------------- PACIENTES ----------------
 
-        if self.frames:
-            self.animar_fondo(0)
+    def modulo_pacientes(self):
 
-        self.simular_carga(0)
+        top=tk.Toplevel(self.root)
+        top.title("Pacientes")
+        top.geometry("500x450")
 
-    def animar_fondo(self, contador):
-        frame = self.frames[contador]
-        self.label_fondo.config(image=frame)
-        contador = (contador + 1) % len(self.frames)
-        self.root.after(50, self.animar_fondo, contador)
+        tk.Label(top,text="Nombre").pack()
+        nombre=tk.Entry(top)
+        nombre.pack()
 
-    def simular_carga(self, n):
-        if n <= 100:
-            self.progreso["value"] = n
-            self.root.after(30, self.simular_carga, n + 1)
-        else:
-            self.lbl_carga.config(text="¡Sistema Listo!")
-            self.btn_entrar.place(relx=0.5, rely=0.85, anchor="center")
+        tk.Label(top,text="Identidad").pack()
+        identidad=tk.Entry(top)
+        identidad.pack()
 
-    def acceder(self):
-        self.root.destroy()
-        iniciar_sistema()
+        tk.Label(top,text="Edad").pack()
+        edad=tk.Entry(top)
+        edad.pack()
 
+        tk.Label(top,text="Telefono").pack()
+        telefono=tk.Entry(top)
+        telefono.pack()
 
-# ===============================
-# FUNCIONES PACIENTES
-# ===============================
+        def guardar():
 
-def registrar_paciente():
+            if nombre.get()=="" or identidad.get()=="":
+                messagebox.showerror("Error","Debe completar nombre e identidad")
+                return
 
-    ventana = tk.Toplevel()
-    ventana.title("Registrar Paciente")
-    ventana.geometry("300x200")
+            cursor=self.conn.cursor()
 
-    tk.Label(ventana, text="Nombre del Paciente").pack(pady=10)
+            cursor.execute(
+            "INSERT INTO pacientes(nombre,identidad,edad,telefono) VALUES(?,?,?,?)",
+            (nombre.get(),identidad.get(),edad.get(),telefono.get())
+            )
 
-    entrada = tk.Entry(ventana)
-    entrada.pack()
+            self.conn.commit()
 
-    def guardar():
-        nombre = entrada.get()
+            messagebox.showinfo("Guardado","Paciente guardado exitosamente")
 
-        if nombre == "":
-            messagebox.showerror("Error", "Debe escribir un nombre")
-            return
+        def buscar():
 
-        pacientes.append(nombre)
+            cursor=self.conn.cursor()
 
-        messagebox.showinfo("Éxito", "Paciente registrado")
+            cursor.execute("""
+            SELECT nombre,identidad,edad,telefono
+            FROM pacientes
+            WHERE nombre LIKE ? OR identidad LIKE ? OR telefono LIKE ?
+            """,(
+                "%"+nombre.get()+"%",
+                "%"+identidad.get()+"%",
+                "%"+telefono.get()+"%"
+            ))
 
-        entrada.delete(0, tk.END)
+            r=cursor.fetchone()
 
-    tk.Button(ventana, text="Guardar", command=guardar).pack(pady=10)
+            if r:
 
+                nombre.delete(0,tk.END)
+                identidad.delete(0,tk.END)
+                edad.delete(0,tk.END)
+                telefono.delete(0,tk.END)
 
-def ver_pacientes():
+                nombre.insert(0,r[0])
+                identidad.insert(0,r[1])
+                edad.insert(0,r[2])
+                telefono.insert(0,r[3])
 
-    ventana = tk.Toplevel()
-    ventana.title("Pacientes")
-    ventana.geometry("300x300")
+            else:
 
-    tk.Label(
-        ventana,
-        text="Pacientes Registrados",
-        font=("Arial", 14, "bold")
-    ).pack(pady=10)
+                messagebox.showinfo("Buscar","Paciente no encontrado")
 
-    if len(pacientes) == 0:
-        tk.Label(ventana, text="No hay pacientes").pack()
+        tk.Button(top,text="Guardar",command=guardar).pack(pady=10)
+        tk.Button(top,text="Buscar Paciente",command=buscar).pack()
 
-    for p in pacientes:
-        tk.Label(ventana, text=p).pack()
+# ---------------- DOCTORES ----------------
 
+    def modulo_doctores(self):
 
-# ===============================
-# FUNCIONES DOCTORES
-# ===============================
+        top=tk.Toplevel(self.root)
+        top.title("Doctores")
+        top.geometry("500x400")
 
-def registrar_doctor():
+        tk.Label(top,text="Nombre").pack()
+        nombre=tk.Entry(top)
+        nombre.pack()
 
-    ventana = tk.Toplevel()
-    ventana.title("Registrar Doctor")
-    ventana.geometry("300x200")
+        tk.Label(top,text="Especialidad").pack()
+        esp=tk.Entry(top)
+        esp.pack()
 
-    tk.Label(ventana, text="Nombre del Doctor").pack(pady=10)
+        tk.Label(top,text="Telefono").pack()
+        tel=tk.Entry(top)
+        tel.pack()
 
-    entrada = tk.Entry(ventana)
-    entrada.pack()
+        def guardar():
 
-    def guardar():
-        nombre = entrada.get()
+            cursor=self.conn.cursor()
 
-        if nombre == "":
-            messagebox.showerror("Error", "Debe escribir un nombre")
-            return
+            cursor.execute(
+            "INSERT INTO doctores(nombre,especialidad,telefono) VALUES(?,?,?)",
+            (nombre.get(),esp.get(),tel.get())
+            )
 
-        doctores.append(nombre)
+            self.conn.commit()
 
-        messagebox.showinfo("Éxito", "Doctor registrado")
+            messagebox.showinfo("Guardado","Doctor guardado exitosamente")
 
-        entrada.delete(0, tk.END)
+        tk.Button(top,text="Guardar",command=guardar).pack(pady=20)
 
-    tk.Button(ventana, text="Guardar", command=guardar).pack(pady=10)
+# ---------------- CITAS ----------------
 
+    def modulo_citas(self):
 
-# ===============================
-# FUNCIONES CITAS
-# ===============================
+        top=tk.Toplevel(self.root)
+        top.title("Citas")
+        top.geometry("700x500")
 
-def crear_cita():
+        tk.Label(top,text="Identidad Paciente").pack()
+        identidad=tk.Entry(top)
+        identidad.pack()
 
-    ventana = tk.Toplevel()
-    ventana.title("Crear Cita")
-    ventana.geometry("350x250")
+        tk.Label(top,text="Doctor").pack()
+        doctor=tk.Entry(top)
+        doctor.pack()
 
-    tk.Label(ventana, text="Paciente").pack()
-    paciente_entry = tk.Entry(ventana)
-    paciente_entry.pack()
+        tk.Label(top,text="Fecha (YYYY-MM-DD)").pack()
+        fecha=tk.Entry(top)
+        fecha.pack()
 
-    tk.Label(ventana, text="Doctor").pack()
-    doctor_entry = tk.Entry(ventana)
-    doctor_entry.pack()
+        tabla=ttk.Treeview(top,columns=("Fecha","Paciente","Doctor"),show="headings")
+        tabla.heading("Fecha",text="Fecha")
+        tabla.heading("Paciente",text="Paciente")
+        tabla.heading("Doctor",text="Doctor")
+        tabla.pack(fill="both",expand=True)
 
-    tk.Label(ventana, text="Fecha (YYYY-MM-DD)").pack()
-    fecha_entry = tk.Entry(ventana)
-    fecha_entry.pack()
+        def cargar():
 
-    def guardar():
+            for i in tabla.get_children():
+                tabla.delete(i)
 
-        paciente = paciente_entry.get()
-        doctor = doctor_entry.get()
-        fecha = fecha_entry.get()
+            cursor=self.conn.cursor()
 
-        if paciente == "" or doctor == "" or fecha == "":
-            messagebox.showerror("Error", "Debe completar todos los campos")
-            return
+            cursor.execute("SELECT fecha,paciente,doctor FROM citas")
 
-        cita = {
-            "paciente": paciente,
-            "doctor": doctor,
-            "fecha": fecha
-        }
+            for r in cursor.fetchall():
+                tabla.insert("",tk.END,values=r)
 
-        citas.append(cita)
+        def crear():
 
-        messagebox.showinfo("Éxito", "Cita creada")
+            cursor=self.conn.cursor()
 
-        ventana.destroy()
+            cursor.execute(
+            "SELECT nombre FROM pacientes WHERE identidad=?",
+            (identidad.get(),)
+            )
 
-    tk.Button(ventana, text="Guardar Cita", command=guardar).pack(pady=10)
+            p=cursor.fetchone()
 
+            if not p:
 
-def ver_citas_hoy():
+                messagebox.showerror("Error","Paciente no existe")
+                return
 
-    ventana = tk.Toplevel()
-    ventana.title("Citas de Hoy")
-    ventana.geometry("350x300")
+            paciente=p[0]
 
-    hoy = datetime.now().strftime("%Y-%m-%d")
+            cursor.execute(
+            "INSERT INTO citas(fecha,paciente,doctor) VALUES(?,?,?)",
+            (fecha.get(),paciente,doctor.get())
+            )
 
-    tk.Label(
-        ventana,
-        text="Citas del Día",
-        font=("Arial", 14, "bold")
-    ).pack(pady=10)
+            self.conn.commit()
 
-    hay = False
+            messagebox.showinfo("Guardado","Cita registrada exitosamente")
 
-    for c in citas:
-        if c["fecha"] == hoy:
-            texto = f"{c['paciente']} con Dr. {c['doctor']}"
-            tk.Label(ventana, text=texto).pack()
-            hay = True
+            cargar()
 
-    if not hay:
-        tk.Label(ventana, text="No hay citas hoy").pack()
+        def eliminar():
 
+            item=tabla.selection()
 
-# ===============================
-# MENÚ PRINCIPAL
-# ===============================
+            if not item:
+                return
 
-def iniciar_sistema():
-    ventana = tk.Tk()
-    ventana.title("Sistema Médico")
-    ventana.geometry("500x450")
+            datos=tabla.item(item)["values"]
 
-    titulo = tk.Label(
-        ventana,
-        text="Sistema de Gestión Médica",
-        font=("Arial", 18, "bold")
-    )
-    titulo.pack(pady=20)
+            cursor=self.conn.cursor()
 
-    tk.Button(
-        ventana,
-        text="Registrar Paciente",
-        width=25,
-        height=2,
-        command=registrar_paciente
-    ).pack(pady=10)
+            cursor.execute(
+            "DELETE FROM citas WHERE fecha=? AND paciente=? AND doctor=?",
+            (datos[0],datos[1],datos[2])
+            )
 
-    tk.Button(
-        ventana,
-        text="Ver Pacientes",
-        width=25,
-        height=2,
-        command=ver_pacientes
-    ).pack(pady=10)
+            self.conn.commit()
 
-    tk.Button(
-        ventana,
-        text="Registrar Doctor",
-        width=25,
-        height=2,
-        command=registrar_doctor
-    ).pack(pady=10)
+            cargar()
 
-    tk.Button(
-        ventana,
-        text="Crear Cita",
-        width=25,
-        height=2,
-        command=crear_cita
-    ).pack(pady=10)
+        def citas_hoy():
 
-    tk.Button(
-        ventana,
-        text="Ver Citas del Día",
-        width=25,
-        height=2,
-        command=ver_citas_hoy
-    ).pack(pady=10)
+            hoy=datetime.now().strftime("%Y-%m-%d")
 
-    ventana.mainloop()
+            cursor=self.conn.cursor()
 
+            cursor.execute(
+            "SELECT paciente,doctor FROM citas WHERE fecha=?",
+            (hoy,)
+            )
 
-# ===============================
-# INICIO DEL PROGRAMA
-# ===============================
+            r=cursor.fetchall()
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = PortadaSoftware(root)
+            texto=""
+
+            for x in r:
+                texto+=f"{x[0]} con Dr. {x[1]}\n"
+
+            if texto=="":
+                texto="No hay citas hoy"
+
+            messagebox.showinfo("Citas Hoy",texto)
+
+        tk.Button(top,text="Crear Cita",command=crear).pack(pady=5)
+        tk.Button(top,text="Eliminar Cita",command=eliminar).pack(pady=5)
+        tk.Button(top,text="Ver Citas del Día",command=citas_hoy).pack(pady=5)
+
+        cargar()
+
+# ---------------- INICIO ----------------
+
+if __name__=="__main__":
+
+    root=tk.Tk()
+
+    app=MediControlPro(root)
+
     root.mainloop()
