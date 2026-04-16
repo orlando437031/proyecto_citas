@@ -4,6 +4,13 @@ from PIL import Image, ImageTk
 import sqlite3
 from datetime import datetime
 
+# Las citas de hoy
+query_citas = "SELECT hora, paciente FROM citas WHERE fecha = date('now')"
+
+# Emergencias (asegurándote de que los campos existan en tu DB)
+query_emergencias = "SELECT paciente, motivo FROM citas WHERE tipo = 'Emergencia' AND estado = 'Pendiente'"
+
+
 
 class MediControlPro:
 
