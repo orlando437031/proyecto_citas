@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 import sqlite3
 from datetime import datetime
 
+
 class MediControlPro:
 
     def __init__(self, root):
@@ -13,7 +14,7 @@ class MediControlPro:
         self.root.geometry("1100x700")
         self.root.configure(bg="#0a192f")
 
-        self.conn = sqlite3.connect("clinica.db")
+        self.conn = sqlite3.connect("./data/clinica.db")
         self.crear_tablas()
 
         self.mostrar_splash()
@@ -30,6 +31,7 @@ class MediControlPro:
         nombre TEXT,
         identidad TEXT,
         edad TEXT,
+        sexo TEXT,
         telefono TEXT)
         """)
 
@@ -46,6 +48,7 @@ class MediControlPro:
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         fecha TEXT,
         paciente TEXT,
+        identidad TEXT,
         doctor TEXT)
         """)
 
@@ -117,13 +120,13 @@ class MediControlPro:
             fg="#00e5ff"
         ).pack(pady=30)
 
-        tk.Button(sidebar,text="👥 PACIENTES",bg="#112240",fg="white",relief="flat",
+        tk.Button(sidebar,text="👥 PACIENTES",bg="#112240",fg="white",
                   command=self.modulo_pacientes).pack(fill="x",pady=5)
 
-        tk.Button(sidebar,text="👨‍⚕️ DOCTORES",bg="#112240",fg="white",relief="flat",
+        tk.Button(sidebar,text="👨‍⚕️ DOCTORES",bg="#112240",fg="white",
                   command=self.modulo_doctores).pack(fill="x",pady=5)
 
-        tk.Button(sidebar,text="📅 CITAS",bg="#112240",fg="white",relief="flat",
+        tk.Button(sidebar,text="📅 CITAS",bg="#112240",fg="white",
                   command=self.modulo_citas).pack(fill="x",pady=5)
 
         main=tk.Frame(self.root,bg="#0a192f")
@@ -143,7 +146,7 @@ class MediControlPro:
 
         top=tk.Toplevel(self.root)
         top.title("Pacientes")
-        top.geometry("500x450")
+        top.geometry("500x500")
 
         tk.Label(top,text="Nombre").pack()
         nombre=tk.Entry(top)
@@ -157,21 +160,21 @@ class MediControlPro:
         edad=tk.Entry(top)
         edad.pack()
 
+        tk.Label(top,text="Sexo").pack()
+        sexo=tk.Entry(top)
+        sexo.pack()
+
         tk.Label(top,text="Telefono").pack()
         telefono=tk.Entry(top)
         telefono.pack()
 
         def guardar():
 
-            if nombre.get()=="" or identidad.get()=="":
-                messagebox.showerror("Error","Debe completar nombre e identidad")
-                return
-
             cursor=self.conn.cursor()
 
             cursor.execute(
-            "INSERT INTO pacientes(nombre,identidad,edad,telefono) VALUES(?,?,?,?)",
-            (nombre.get(),identidad.get(),edad.get(),telefono.get())
+            "INSERT INTO pacientes(nombre,identidad,edad,sexo,telefono) VALUES(?,?,?,?,?)",
+            (nombre.get(),identidad.get(),edad.get(),sexo.get(),telefono.get())
             )
 
             self.conn.commit()
@@ -183,7 +186,7 @@ class MediControlPro:
             cursor=self.conn.cursor()
 
             cursor.execute("""
-            SELECT nombre,identidad,edad,telefono
+            SELECT nombre,identidad,edad,sexo,telefono
             FROM pacientes
             WHERE nombre LIKE ? OR identidad LIKE ? OR telefono LIKE ?
             """,(
@@ -199,12 +202,14 @@ class MediControlPro:
                 nombre.delete(0,tk.END)
                 identidad.delete(0,tk.END)
                 edad.delete(0,tk.END)
+                sexo.delete(0,tk.END)
                 telefono.delete(0,tk.END)
 
                 nombre.insert(0,r[0])
                 identidad.insert(0,r[1])
                 edad.insert(0,r[2])
-                telefono.insert(0,r[3])
+                sexo.insert(0,r[3])
+                telefono.insert(0,r[4])
 
             else:
 
@@ -219,7 +224,7 @@ class MediControlPro:
 
         top=tk.Toplevel(self.root)
         top.title("Doctores")
-        top.geometry("500x400")
+        top.geometry("400x300")
 
         tk.Label(top,text="Nombre").pack()
         nombre=tk.Entry(top)
@@ -254,9 +259,13 @@ class MediControlPro:
 
         top=tk.Toplevel(self.root)
         top.title("Citas")
-        top.geometry("700x500")
+        top.geometry("750x550")
 
-        tk.Label(top,text="Identidad Paciente").pack()
+        tk.Label(top,text="Nombre Paciente").pack()
+        nombre=tk.Entry(top)
+        nombre.pack()
+
+        tk.Label(top,text="Identidad").pack()
         identidad=tk.Entry(top)
         identidad.pack()
 
@@ -274,14 +283,31 @@ class MediControlPro:
         tabla.heading("Doctor",text="Doctor")
         tabla.pack(fill="both",expand=True)
 
-        def cargar():
+        def limpiar_tabla():
+            for item in tabla.get_children():
+                tabla.delete(item)
 
-            for i in tabla.get_children():
-                tabla.delete(i)
+        def ver_todas():
+
+            limpiar_tabla()
 
             cursor=self.conn.cursor()
-
             cursor.execute("SELECT fecha,paciente,doctor FROM citas")
+
+            for r in cursor.fetchall():
+                tabla.insert("",tk.END,values=r)
+
+        def citas_hoy():
+
+            limpiar_tabla()
+
+            hoy=datetime.now().strftime("%Y-%m-%d")
+
+            cursor=self.conn.cursor()
+            cursor.execute(
+                "SELECT fecha,paciente,doctor FROM citas WHERE fecha=?",
+                (hoy,)
+            )
 
             for r in cursor.fetchall():
                 tabla.insert("",tk.END,values=r)
@@ -291,38 +317,25 @@ class MediControlPro:
             cursor=self.conn.cursor()
 
             cursor.execute(
-            "SELECT nombre FROM pacientes WHERE identidad=?",
-            (identidad.get(),)
-            )
-
-            p=cursor.fetchone()
-
-            if not p:
-
-                messagebox.showerror("Error","Paciente no existe")
-                return
-
-            paciente=p[0]
-
-            cursor.execute(
-            "INSERT INTO citas(fecha,paciente,doctor) VALUES(?,?,?)",
-            (fecha.get(),paciente,doctor.get())
+                "INSERT INTO citas(fecha,paciente,identidad,doctor) VALUES(?,?,?,?)",
+                (fecha.get(),nombre.get(),identidad.get(),doctor.get())
             )
 
             self.conn.commit()
 
-            messagebox.showinfo("Guardado","Cita registrada exitosamente")
+            messagebox.showinfo("Guardado","Cita registrada")
 
-            cargar()
+            ver_todas()
 
         def eliminar():
 
             item=tabla.selection()
 
             if not item:
+                messagebox.showwarning("Eliminar","Seleccione una cita")
                 return
 
-            datos=tabla.item(item)["values"]
+            datos=tabla.item(item[0])["values"]
 
             cursor=self.conn.cursor()
 
@@ -333,36 +346,14 @@ class MediControlPro:
 
             self.conn.commit()
 
-            cargar()
-
-        def citas_hoy():
-
-            hoy=datetime.now().strftime("%Y-%m-%d")
-
-            cursor=self.conn.cursor()
-
-            cursor.execute(
-            "SELECT paciente,doctor FROM citas WHERE fecha=?",
-            (hoy,)
-            )
-
-            r=cursor.fetchall()
-
-            texto=""
-
-            for x in r:
-                texto+=f"{x[0]} con Dr. {x[1]}\n"
-
-            if texto=="":
-                texto="No hay citas hoy"
-
-            messagebox.showinfo("Citas Hoy",texto)
+            ver_todas()
 
         tk.Button(top,text="Crear Cita",command=crear).pack(pady=5)
         tk.Button(top,text="Eliminar Cita",command=eliminar).pack(pady=5)
-        tk.Button(top,text="Ver Citas del Día",command=citas_hoy).pack(pady=5)
+        tk.Button(top,text="Citas del Día",command=citas_hoy).pack(pady=5)
+        tk.Button(top,text="Ver Todas las Citas",command=ver_todas).pack(pady=5)
 
-        cargar()
+        ver_todas()
 
 # ---------------- INICIO ----------------
 
